@@ -2,12 +2,12 @@ import numpy as np
 import pandas as pd
 import RPi.GPIO as GPIO
 import time
+from datetime import datetime, timedelta
 
 # Setup GPIO pins for the RGB LED
 RED_PIN = 12
 GREEN_PIN = 13
 BLUE_PIN = 19
-
 GPIO.setmode(GPIO.BCM)  # Use BCM pin numbering
 GPIO.setup(RED_PIN, GPIO.OUT)
 GPIO.setup(GREEN_PIN, GPIO.OUT)
@@ -41,63 +41,95 @@ xyz_to_rgb_matrix = np.array([
 
 class ColorTemperatureConverter:
     def __init__(self, cct):
-        """Initialize with the desired color temperature in Kelvin."""
         self.cct = cct
 
     def planck_law(self, wavelength):
-        """Calculate spectral radiance using Planck's Law."""
-        h = 6.62607015e-34  # Planck constant
-        c = 2.99792458e8    # Speed of light
-        k = 1.380649e-23    # Boltzmann constant
-        l = wavelength * 1e-9  # Convert to meters
+        h = 6.62607015e-34
+        c = 2.99792458e8
+        k = 1.380649e-23
+        l = wavelength * 1e-9
         return (2 * h * c ** 2) / (l ** 5) * (1 / (np.exp(h * c / (l * k * self.cct)) - 1))
 
     def cct_to_xyz(self):
-        """Convert the stored CCT (Kelvin) to XYZ using the CIE 1931 Color Matching Functions."""
         spectral_radiance = self.planck_law(wavelengths)
-        X = np.trapz(spectral_radiance * x_bar, wavelengths)  # Numerical integration
+        X = np.trapz(spectral_radiance * x_bar, wavelengths)
         Y = np.trapz(spectral_radiance * y_bar, wavelengths)
         Z = np.trapz(spectral_radiance * z_bar, wavelengths)
         
         XYZ = np.array([X, Y, Z])
-        XYZ /= np.max(XYZ)  # Normalize
-
+        XYZ /= np.max(XYZ)
         return XYZ
 
     def xyz_to_rgb(self, xyz):
-        """Convert XYZ to RGB using the sRGB transformation matrix."""
         rgb = np.dot(xyz_to_rgb_matrix, xyz)
-        rgb = np.clip(rgb, 0, 1)  # Ensure values are within [0, 1]
-        rgb = (rgb * 255).astype(int)  # Convert to [0, 255] range
+        rgb = np.clip(rgb, 0, 1)
+        rgb = (rgb * 255).astype(int)
         return rgb
 
     def get_rgb(self):
-        """Public method to get the RGB value for the initialized CCT."""
         xyz = self.cct_to_xyz()
         return self.xyz_to_rgb(xyz)
 
     def visualize_rgb_led(self):
-        """Control the RGB LED based on the calculated RGB values."""
         rgb = self.get_rgb()
         r, g, b = rgb
-
-        # Convert RGB [0-255] values to duty cycle percentages [0-100]
         red_pwm.ChangeDutyCycle(r * 100 / 255)
         green_pwm.ChangeDutyCycle(g * 100 / 255)
         blue_pwm.ChangeDutyCycle(b * 100 / 255)
-
         print(f"CCT: {self.cct}K -> RGB: {rgb}")
 
-# Example usage:
+def load_lookup_table(filename):
+    df = pd.read_csv(filename)
+    df['Time'] = pd.to_datetime(df['Time'], format='%I:%M %p').dt.time
+    return df
+
+def interpolate_color_temperature(lookup_table, current_time):
+    current_time = current_time.time()
+    
+    # Find the two closest times in the lookup table
+    lower_time = lookup_table[lookup_table['Time'] <= current_time]['Time'].max()
+    upper_time = lookup_table[lookup_table['Time'] > current_time]['Time'].min()
+    
+    if pd.isnull(lower_time):
+        lower_time = lookup_table['Time'].max()
+    if pd.isnull(upper_time):
+        upper_time = lookup_table['Time'].min()
+    
+    lower_temp = lookup_table[lookup_table['Time'] == lower_time]['Color Temperature (K)'].values[0]
+    upper_temp = lookup_table[lookup_table['Time'] == upper_time]['Color Temperature (K)'].values[0]
+    
+    # Convert times to total seconds for interpolation
+    current_seconds = current_time.hour * 3600 + current_time.minute * 60 + current_time.second
+    lower_seconds = lower_time.hour * 3600 + lower_time.minute * 60 + lower_time.second
+    upper_seconds = upper_time.hour * 3600 + upper_time.minute * 60 + upper_time.second
+    
+    # Handle midnight crossing
+    if upper_seconds < lower_seconds:
+        upper_seconds += 24 * 3600
+    if current_seconds < lower_seconds:
+        current_seconds += 24 * 3600
+    
+    # Perform linear interpolation
+    fraction = (current_seconds - lower_seconds) / (upper_seconds - lower_seconds)
+    interpolated_temp = lower_temp + fraction * (upper_temp - lower_temp)
+    
+    return int(round(interpolated_temp))
+
 if __name__ == "__main__":
     try:
-        cct = 6500  # Example color temperature
-        converter = ColorTemperatureConverter(cct)
+        lookup_table = load_lookup_table('lookup_table.csv')
         
-        # Update the LED to reflect the current color temperature
         while True:
+            current_time = datetime.now()
+            cct = interpolate_color_temperature(lookup_table, current_time)
+            converter = ColorTemperatureConverter(cct)
             converter.visualize_rgb_led()
-            time.sleep(1)  # Update every 1 second
+            
+            # Wait until the next 5-minute mark
+            next_update = current_time + timedelta(minutes=5)
+            next_update = next_update.replace(minute=next_update.minute // 5 * 5, second=0, microsecond=0)
+            time.sleep((next_update - current_time).total_seconds())
+    
     except KeyboardInterrupt:
         pass
     finally:
