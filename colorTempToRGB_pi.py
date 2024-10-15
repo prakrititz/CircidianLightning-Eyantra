@@ -81,19 +81,28 @@ class ColorTemperatureConverter:
 def load_lookup_table(filename):
     df = pd.read_csv(filename)
     df['Time'] = pd.to_datetime(df['Time'], format='%I:%M %p').dt.time
+    # Sort the dataframe by time to ensure correct interpolation
+    df = df.sort_values('Time')
     return df
 
 def interpolate_color_temperature(lookup_table, current_time):
     current_time = current_time.time()
     
+    # If the current time is exactly in the lookup table, return that value
+    if current_time in lookup_table['Time'].values:
+        return lookup_table[lookup_table['Time'] == current_time]['Color Temperature (K)'].values[0]
+    
     # Find the two closest times in the lookup table
     lower_time = lookup_table[lookup_table['Time'] <= current_time]['Time'].max()
     upper_time = lookup_table[lookup_table['Time'] > current_time]['Time'].min()
     
+    # Handle the case where current_time is after the last or before the first entry
     if pd.isnull(lower_time):
         lower_time = lookup_table['Time'].max()
-    if pd.isnull(upper_time):
         upper_time = lookup_table['Time'].min()
+    elif pd.isnull(upper_time):
+        upper_time = lookup_table['Time'].min()
+        lower_time = lookup_table['Time'].max()
     
     lower_temp = lookup_table[lookup_table['Time'] == lower_time]['Color Temperature (K)'].values[0]
     upper_temp = lookup_table[lookup_table['Time'] == upper_time]['Color Temperature (K)'].values[0]
@@ -105,12 +114,16 @@ def interpolate_color_temperature(lookup_table, current_time):
     
     # Handle midnight crossing
     if upper_seconds < lower_seconds:
+        if current_seconds < lower_seconds:
+            current_seconds += 24 * 3600
         upper_seconds += 24 * 3600
-    if current_seconds < lower_seconds:
-        current_seconds += 24 * 3600
     
     # Perform linear interpolation
-    fraction = (current_seconds - lower_seconds) / (upper_seconds - lower_seconds)
+    total_diff = upper_seconds - lower_seconds
+    if total_diff == 0:
+        return lower_temp  # Avoid division by zero
+    
+    fraction = (current_seconds - lower_seconds) / total_diff
     interpolated_temp = lower_temp + fraction * (upper_temp - lower_temp)
     
     return int(round(interpolated_temp))
