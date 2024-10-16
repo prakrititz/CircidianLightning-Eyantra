@@ -1,27 +1,13 @@
 import numpy as np
 import pandas as pd
-import RPi.GPIO as GPIO
+from gpiozero import PWMLED
 import time
 from datetime import datetime, timedelta
 
-# Setup GPIO pins for the RGB LED
-RED_PIN = 12
-GREEN_PIN = 13
-BLUE_PIN = 19
-GPIO.setmode(GPIO.BCM)  # Use BCM pin numbering
-GPIO.setup(RED_PIN, GPIO.OUT)
-GPIO.setup(GREEN_PIN, GPIO.OUT)
-GPIO.setup(BLUE_PIN, GPIO.OUT)
-
-# Set up PWM for each LED color
-red_pwm = GPIO.PWM(RED_PIN, 100)   # 100 Hz PWM frequency
-green_pwm = GPIO.PWM(GREEN_PIN, 100)
-blue_pwm = GPIO.PWM(BLUE_PIN, 100)
-
-# Start PWM with 0% duty cycle (off)
-red_pwm.start(0)
-green_pwm.start(0)
-blue_pwm.start(0)
+# Initialize PWM-capable pins for RGB LEDs
+red_led = PWMLED(12)    # PWM0
+green_led = PWMLED(19)  # PWM1
+blue_led = PWMLED(13)   # PWM1
 
 # Load CIE data from CSV file
 cie_data = pd.read_csv('CIE_xyz_1931_2deg.csv', header=None)
@@ -73,9 +59,9 @@ class ColorTemperatureConverter:
     def visualize_rgb_led(self):
         rgb = self.get_rgb()
         r, g, b = rgb
-        red_pwm.ChangeDutyCycle(r * 100 / 255)
-        green_pwm.ChangeDutyCycle(g * 100 / 255)
-        blue_pwm.ChangeDutyCycle(b * 100 / 255)
+        red_led.value = r / 255
+        green_led.value = g / 255
+        blue_led.value = b / 255
         print(f"CCT: {self.cct}K -> RGB: {rgb}")
 
 def load_lookup_table(filename):
@@ -146,7 +132,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pass
     finally:
-        red_pwm.stop()
-        green_pwm.stop()
-        blue_pwm.stop()
-        GPIO.cleanup()
+        red_led.off()
+        green_led.off()
+        blue_led.off()
