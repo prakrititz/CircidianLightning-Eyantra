@@ -35,7 +35,7 @@
 <p>Alternatively, you can see the matplotlib simulation in <code>rgb_simulator_matplotlib.py</code>, which quickly runs through the course of the day showing the Circadian Lighting we desire on your monitor's screen.</p>
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/fc1340b0-df47-4129-b7dd-34b321cdb9d1" alt="Matplotlib Simulation" width="600">
+  https://github.com/user-attachments/assets/fc1340b0-df47-4129-b7dd-34b321cdb9d1
 </p>
 
 <style>
