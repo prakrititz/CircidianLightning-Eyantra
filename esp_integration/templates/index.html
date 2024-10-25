@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Neopixel Controller</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+
+    <div class="container mx-auto p-8 bg-white rounded-lg shadow-lg max-w-lg">
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">ESP32 Neopixel Controller</h1>
+
+        <!-- Manual RGB and Brightness Control -->
+        <form action="/set_color" method="POST" class="mb-6">
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="r" class="block text-sm font-medium text-gray-700">Red</label>
+                    <input type="number" name="r" id="r" min="0" max="255" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+
+                <div>
+                    <label for="g" class="block text-sm font-medium text-gray-700">Green</label>
+                    <input type="number" name="g" id="g" min="0" max="255" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+
+                <div>
+                    <label for="b" class="block text-sm font-medium text-gray-700">Blue</label>
+                    <input type="number" name="b" id="b" min="0" max="255" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+
+                <div>
+                    <label for="brightness" class="block text-sm font-medium text-gray-700">Brightness</label>
+                    <input type="number" name="brightness" id="brightness" step="0.01" min="0" max="1" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Set Color</button>
+        </form>
+
+        <!-- Action Buttons -->
+        <div class="grid grid-cols-1 gap-4">
+            <a href="/test_csv" class="block w-full text-center bg-blue-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Test All CSV Values</a>
+
+            <button onclick="restartServer()" class="w-full bg-red-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">Restart Server</button>
+
+            <button onclick="returnToNormal()" class="w-full bg-green-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Return to Normal Operation</button>
+        </div>
+    </div>
+
+    <script>
+        // Restart the server (you will need to implement the backend endpoint for this)
+        function restartServer() {
+            fetch('/restart_server', {
+                method: 'GET'
+            }).then(response => {
+                if (response.ok) {
+                    alert("Server restarting...");
+                } else {
+                    alert("Failed to restart the server.");
+                }
+            });
+        }
+
+        // Return to normal operation (resume syncing from CSV)
+        function returnToNormal() {
+            fetch('/return_to_normal', {
+                method: 'GET'
+            }).then(response => {
+                if (response.ok) {
+                    alert("Returning to normal operation...");
+                } else {
+                    alert("Failed to return to normal operation.");
+                }
+            });
+        }
+    </script>
+
+</body>
+</html>

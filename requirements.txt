@@ -1,0 +1,11 @@
+matplotlib
+neopixel
+gpiozero
+board
+RPi.GPIO
+pandas
+flask
+requests
+numpy
+pandas
+scipy
