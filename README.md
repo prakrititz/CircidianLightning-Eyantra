@@ -74,6 +74,13 @@ Use any available sources to obtain color temperature data throughout the day. T
 #### Other Implementation Options
 Arduino and Simulation modes are planned for future releases.
 
+## Demo
+
+This demo was run by clicking the `Test_CSV` button in the website, which rapidly goes through lighting over the course of the day.
+
+https://github.com/user-attachments/assets/86c8f049-f758-451c-9e58-4bdbbcfdf267
+
+
 ## 🔜 Next Steps
 * Integration with sunset/sunrise by location API to automatically configure circadian lighting for any location/timezone [DONE].
 * Introduction of various color specific matrices to offer color-targeted Circadian Lighting for different rooms. For example, green-ish circadian lighting in hospital operating rooms, warm or natural in cosy areas, blue-ish in areas which need more productivity.
