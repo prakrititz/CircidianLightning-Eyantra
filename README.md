@@ -1,7 +1,4 @@
 <h1 align="center">🌈 RGB Simulator for Circadian Lighting 🌙</h1>
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/e43740bd-0f46-4102-9771-11c8836842f2" alt="Color Temperature Data" width="600">
-</p>
 
 ## 🛠️ Installation
 Before starting, install the required Python packages:
@@ -77,28 +74,3 @@ Arduino and Simulation modes are planned for future releases.
 
 ## 🔜 Next Steps
 * Integration with sunset/sunrise by location API to automatically configure circadian lighting for any location/timezone
-
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    line-height: 1.6;
-    color: #333;
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-  h1, h2, h3 {
-    color: #2c3e50;
-  }
-  code {
-    background-color: #f4f4f4;
-    padding: 2px 4px;
-    border-radius: 4px;
-  }
-  img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-  }
-</style>
