@@ -68,9 +68,13 @@ Use any available sources to obtain color temperature data throughout the day. T
   - Circadian rhythm simulation control
   - Return to automatic mode
 - Automatic circadian rhythm when left unattended
+- Location based Circadian Lighting
+  ![image](https://github.com/user-attachments/assets/7a2a45dc-441c-4ebf-aa03-d74a9b7bce40)
+
 
 #### Other Implementation Options
 Arduino and Simulation modes are planned for future releases.
 
 ## 🔜 Next Steps
-* Integration with sunset/sunrise by location API to automatically configure circadian lighting for any location/timezone
+* Integration with sunset/sunrise by location API to automatically configure circadian lighting for any location/timezone [DONE]
+* Introduction of various color specific matrices to offer color-targeted Circadian Lighting for different rooms. For example, green-ish circadian lighting in operating rooms, warm or natural in cosy areas, blue-ish in areas which need more productivity.
