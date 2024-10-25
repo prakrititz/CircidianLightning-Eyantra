@@ -56,11 +56,8 @@ Use any available sources to obtain color temperature data throughout the day. T
    - Note down the ESP32's IP address
 
 2. On the Python server:
-   - Update `clientCode_step3.py` with ESP32's IP address
-   - Run the following files in order:
-     1. `step1.py` (You'll be prompted for sunrise/sunset times)
-     2. `step2.py`
-     3. `clientCode_step3.py`
+   - Update `master.py` with ESP32's IP address
+   - Run `master.py` with `python master.py`
 
 #### Features
 - Flask web interface for:
@@ -76,5 +73,6 @@ Use any available sources to obtain color temperature data throughout the day. T
 Arduino and Simulation modes are planned for future releases.
 
 ## 🔜 Next Steps
-* Integration with sunset/sunrise by location API to automatically configure circadian lighting for any location/timezone [DONE]
+* Integration with sunset/sunrise by location API to automatically configure circadian lighting for any location/timezone [DONE].
 * Introduction of various color specific matrices to offer color-targeted Circadian Lighting for different rooms. For example, green-ish circadian lighting in hospital operating rooms, warm or natural in cosy areas, blue-ish in areas which need more productivity.
+* Deployment on Docker or Creation of a Mobile App.
