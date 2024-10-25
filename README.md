@@ -54,10 +54,12 @@ Use any available sources to obtain color temperature data throughout the day. T
    - Enter your WiFi SSID and password
    - Upload to ESP32
    - Note down the ESP32's IP address
+   - After modifying the code, upload it to the ESP32.
 
 2. On the Python server:
    - Update `master.py` with ESP32's IP address
    - Run `master.py` with `python master.py`
+   - Now ensure both Python server and ESP are on the same WiFi.
 
 #### Features
 - Flask web interface for:
