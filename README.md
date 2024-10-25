@@ -77,4 +77,4 @@ Arduino and Simulation modes are planned for future releases.
 
 ## 🔜 Next Steps
 * Integration with sunset/sunrise by location API to automatically configure circadian lighting for any location/timezone [DONE]
-* Introduction of various color specific matrices to offer color-targeted Circadian Lighting for different rooms. For example, green-ish circadian lighting in operating rooms, warm or natural in cosy areas, blue-ish in areas which need more productivity.
+* Introduction of various color specific matrices to offer color-targeted Circadian Lighting for different rooms. For example, green-ish circadian lighting in hospital operating rooms, warm or natural in cosy areas, blue-ish in areas which need more productivity.
