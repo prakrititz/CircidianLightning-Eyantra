@@ -3,7 +3,7 @@ import pandas as pd
 import requests
 import time
 from datetime import datetime, timedelta
-from threading import Thread
+from threading import Thread, Event
 import os
 import sys
 
@@ -13,6 +13,7 @@ app = Flask(__name__)
 csv_file = 'rgb_values.csv'
 last_manual_input_time = None
 testing_mode = False  # Flag to check if we are in testing mode
+stop_threads = Event()  # Event to stop running threads
 # ESP32 URL (replace with the actual IP of ESP32 on the same network)
 ESP32_URL = "http://192.168.63.89/set_color"
 
@@ -36,7 +37,7 @@ def get_current_values():
     current_time = datetime.now().strftime('%H:%M')
     # Match the current time to the nearest 5-minute interval in the CSV
     row = data.iloc[int(datetime.now().strftime('%H')) * 12 + int(datetime.now().strftime('%M')) // 5]
-    return int(row['R']), int(row['G']), int(row['B']), (float(row['Brightness']) + 0.05)
+    return int(row['R']), int(row['G']), int(row['B']), (float(row['Brightness']) + 0.2)
 
 # Flask route to show web interface
 @app.route('/')
@@ -57,9 +58,9 @@ def set_color():
 
 # Background task that keeps the ESP32 synchronized with the CSV file
 def sync_with_csv():
-    global last_manual_input_time, testing_mode
+    global last_manual_input_time, testing_mode, stop_threads
     last_values = None
-    while True:
+    while not stop_threads.is_set():
         if not testing_mode:
             current_time = datetime.now()
             
@@ -75,14 +76,17 @@ def sync_with_csv():
 # Route to trigger testing all CSV values
 @app.route('/test_csv')
 def test_csv():
-    global testing_mode
+    global testing_mode, stop_threads
     # Enable testing mode
     testing_mode = True
+    stop_threads.clear()  # Ensure the sync thread continues after testing
 
     # Run through all values in the CSV
     def run_test():
         for index, row in data.iterrows():
-            r, g, b, brightness = int(row['R']), int(row['G']), int(row['B']), min(1, float(row['Brightness']+0.05))
+            if stop_threads.is_set():
+                return
+            r, g, b, brightness = int(row['R']), int(row['G']), int(row['B']), min(1, float(row['Brightness']+0.2))
             send_to_esp32(r, g, b, brightness)
             print(f"Testing row {index}: R={r}, G={g}, B={b}, Brightness={brightness}")
             time.sleep(0.001)  # Short delay for quick testing
@@ -98,6 +102,21 @@ def test_csv():
 
     return "Testing CSV values. Please wait..."
 
+# Route to return to normal operation (kill all threads and start sync_with_csv again)
+@app.route('/return_to_normal')
+def return_to_normal():
+    global testing_mode, stop_threads
+    testing_mode = False  # Reset the testing mode flag
+    stop_threads.set()  # Stop all ongoing threads by setting the flag
+    time.sleep(1)  # Give some time for threads to terminate
+
+    # Start the sync_with_csv task again
+    stop_threads.clear()
+    Thread(target=sync_with_csv, daemon=True).start()
+    
+    print("Returning to normal operation.")
+    return "Returning to normal operation.", 200
+
 # Route to restart the server
 @app.route('/restart_server')
 def restart_server():
@@ -109,16 +128,6 @@ def restart_server():
     Thread(target=restart).start()
     
     return "Server restarting...", 200
-
-# Route to return to normal operation
-@app.route('/return_to_normal')
-def return_to_normal():
-    global testing_mode
-    global last_manual_input_time
-    testing_mode = False  # Reset the testing mode flag
-    last_manual_input_time = None  # Immediately reset manual input time
-    print("Returning to normal operation.")
-    return "Returning to normal operation.", 200
 
 if __name__ == '__main__':
     # Start the background CSV sync task

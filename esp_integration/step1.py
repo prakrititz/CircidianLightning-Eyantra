@@ -70,7 +70,7 @@ df.to_csv('generated_circadian_cct_brightness.csv', index=False)
 # Plot the curves
 plt.figure(figsize=(12, 6))
 plt.plot(t, cct, label='Color Temperature (K)', color='blue')
-plt.plot(t, brightness * 6500, label='Brightness', color='yellow', linestyle='--')  # Scale brightness for better visualization
+plt.plot(t, brightness * (6500), label='Brightness', color='yellow', linestyle='--')  # Scale brightness for better visualization
 plt.xlabel('Time (hours)')
 plt.ylabel('Value')
 plt.title(f'Circadian Rhythm: Color Temperature and Brightness vs Time\nSunrise: {sunrise_time}, Sunset: {sunset_time}')
