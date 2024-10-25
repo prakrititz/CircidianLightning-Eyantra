@@ -16,9 +16,9 @@ z_bar = cie_data.iloc[:, 3].values
 
 # Standard RGB transformation matrix from XYZ (sRGB color space)
 xyz_to_rgb_matrix = np.array([
-    [3.1341864, -1.6172090, -0.4906941],
-[-0.9787485,  1.9161301,  0.0334334],
- [0.0719639, -0.2289939,  1.4057537]
+    [3.2406, -1.5372, -0.4986],
+[-0.9689,  1.8758,  0.0415],
+ [0.0557, -0.2040,  1.0570]
 ])
 
 class ColorTemperatureConverter:
