@@ -175,11 +175,11 @@ def step2(mode):
         def xyz_to_rgb(self, xyz, mode ='none'):
             print("Input XYZ values:", xyz)
             transform = None
-            if mode == 'warmness' or 'none':
+            if mode == 'warm' or 'none':
                 transform = self.get_warmness_matrix(xyz)
             elif mode == 'hospital':
                 transform = self.get_hospital_matrix(xyz)
-            elif mode == 'office_focus':
+            elif mode == 'office':
                 transform = self.get_office_focus_matrix(xyz)
             elif mode == 'cafe':
                 transform = self.get_cafe_matrix(xyz)
@@ -314,7 +314,6 @@ def get_location_data():
     lat = data.get('latitude')
     lng = data.get('longitude')
     tzid = data.get('timezone')
-    mode = data.get('mode')
 
     sunrise, sunset = get_sunrise_sunset_times(lat, lng, tzid=tzid)
     
@@ -401,6 +400,23 @@ def generate_lighting_schedule(sunrise_time, sunset_time, mode='none'):
     step2(mode)
     global data
     data = pd.read_csv(csv_file)  # Reload the CSV after generation
+
+@app.route('/change_mode', methods = ['POST'])
+def change_mode():
+    rdata = request.json
+    mode = rdata.get('mode')
+    try:
+        step2(mode)
+        global data
+        data = pd.read_csv(csv_file)  # Reload the CSV after generation
+        return jsonify({
+            'status': 'success',
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        })
 
 if __name__ == '__main__':
     # Start the background CSV sync task
