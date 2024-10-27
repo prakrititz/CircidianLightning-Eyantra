@@ -89,7 +89,7 @@ def step1(sunrise_time, sunset_time):
 
         print("CCT curve with brightness generated. Results saved to 'generated_circadian_cct_brightness.csv' and 'generated_circadian_cct_brightness.png'.")
 
-def step2():
+def step2(mode):
     cie_data = pd.read_csv('CIE_xyz_1931_2deg.csv', header=None)
 
     # Extract wavelength and color matching functions data
@@ -115,11 +115,45 @@ def step2():
             [0, 1 + (0.3 * warmness_level), 0],  # Slightly increase green
             [0, 0, 1 - (0.4 * warmness_level)]   # More blue reduction
         ])
+    
+    #TODO: Implement weather based matrices, based on ma'ams suggestion
+    def get_hospital_matrix():
+        """
+        Creates a matrix optimized for hospital environments with enhanced green tones
+        for a calming and clinical atmosphere
+        """
+        return np.array([
+            [0.8, 0, 0],      # Reduce red
+            [0, 1.3, 0],      # Enhance green
+            [0, 0, 1.0]       # Normal blue
+        ])
+
+    def get_office_focus_matrix():
+        """
+        Creates a matrix optimized for office focus areas with enhanced blue tones
+        to promote alertness and concentration
+        """
+        return np.array([
+            [0.9, 0, 0],      # Slightly reduce red
+            [0, 1.0, 0],      # Normal green
+            [0, 0, 1.4]       # Enhance blue
+        ])
+
+    def get_cafe_matrix():
+        """
+        Creates a matrix optimized for cafe environments with enhanced warm tones
+        for a cozy and inviting atmosphere
+        """
+        return np.array([
+            [1.3, 0, 0],      # Enhance red
+            [0, 1.1, 0],      # Slightly enhance green
+            [0, 0, 0.7]       # Reduce blue
+        ])
 
     class ColorTemperatureConverter:
         def __init__(self, cct, warmness=0.7):
             self.cct = cct
-            self.warmness = max(0.0, min(1.0, warmness))
+            self.warmness = max(0.0, min(1.5, warmness))
 
         def planck_law(self, wavelength):
             h = 6.62607015e-34
@@ -138,12 +172,22 @@ def step2():
             XYZ /= np.max(XYZ)
             return XYZ
 
-        def xyz_to_rgb(self, xyz):
+        def xyz_to_rgb(self, xyz, mode ='none'):
             print("Input XYZ values:", xyz)
-            
+            transform = None
+            if mode == 'warmness' or 'none':
+                transform = self.get_warmness_matrix(xyz)
+            elif mode == 'hospital':
+                transform = self.get_hospital_matrix(xyz)
+            elif mode == 'office_focus':
+                transform = self.get_office_focus_matrix(xyz)
+            elif mode == 'cafe':
+                transform = self.get_cafe_matrix(xyz)
+            else:
+                raise ValueError("Invalid mode. Choose from 'None', 'warmness', 'hospital', 'office_focus', or 'cafe'.")
             # Apply warmness transformation first
-            warmness_matrix = get_warmness_matrix(self.warmness)
-            modified_matrix = np.dot(warmness_matrix, xyz_to_rgb_matrix)
+            # transform = get_warmness_matrix(self.warmness)
+            modified_matrix = np.dot(transform, xyz_to_rgb_matrix)
             
             # Convert to RGB
             rgb = np.dot(modified_matrix, xyz)
@@ -164,7 +208,7 @@ def step2():
             
             return rgb
 
-        def get_rgb(self):
+        def get_rgb(self, mode='none'):
             xyz = self.cct_to_xyz()
             return self.xyz_to_rgb(xyz)
 
@@ -172,12 +216,12 @@ def step2():
         df = pd.read_csv(filename)
         return df['Color Temperature (K)'].values, df['Brightness'].values
 
-    def save_rgb_to_csv(cct_values,brightness_values, output_filename):
+    def save_rgb_to_csv(cct_values,brightness_values, output_filename, mode='none'):
         rgb_values = []
 
         for cct,brightness in zip(cct_values, brightness_values):
             converter = ColorTemperatureConverter(cct, warmness=0.9)
-            rgb = converter.get_rgb()
+            rgb = converter.get_rgb(mode)
             rgb_values.append((cct, *rgb, brightness))
 
         # Create a DataFrame and save to CSV
@@ -188,13 +232,13 @@ def step2():
     cct_values, brightness_values = load_lookup_table('generated_circadian_cct_brightness.csv')
     
     # Save the RGB values to a new CSV
-    save_rgb_to_csv(cct_values,brightness_values, 'rgb_values.csv')
+    save_rgb_to_csv(cct_values,brightness_values, 'rgb_values.csv', mode)
 # Global variables
 csv_file = 'rgb_values.csv'
 last_manual_input_time = None
 testing_mode = False
 stop_threads = Event()
-ESP32_URL = "http://192.168.63.89/set_color"
+ESP32_URL = "http://192.168.178.89/set_color"
 
 # Load CSV data
 try:
@@ -270,6 +314,7 @@ def get_location_data():
     lat = data.get('latitude')
     lng = data.get('longitude')
     tzid = data.get('timezone')
+    mode = data.get('mode')
 
     sunrise, sunset = get_sunrise_sunset_times(lat, lng, tzid=tzid)
     
@@ -282,7 +327,7 @@ def get_location_data():
         sunset_time = sunset_dt.strftime("%I:%M %p")
         
         # Generate lighting schedule based on sunrise/sunset
-        generate_lighting_schedule(sunrise_time, sunset_time)
+        generate_lighting_schedule(sunrise_time, sunset_time, mode)
         
         return jsonify({
             'status': 'success',
@@ -349,11 +394,11 @@ def restart_server():
     Thread(target=restart).start()
     return "Server restarting...", 200
 
-def generate_lighting_schedule(sunrise_time, sunset_time):
+def generate_lighting_schedule(sunrise_time, sunset_time, mode='none'):
     """Generate lighting schedule based on sunrise and sunset times"""
     # Call your existing step1 and step2 functions here
     step1(sunrise_time, sunset_time)
-    step2()
+    step2(mode)
     global data
     data = pd.read_csv(csv_file)  # Reload the CSV after generation
 
