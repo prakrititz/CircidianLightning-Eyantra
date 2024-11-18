@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="{{ url_for('static', filename='iro.js') }}"></script>
 </head>
+
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
     <div class="container mx-auto p-8 bg-white rounded-lg shadow-lg max-w-lg">
         <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">Smart Lighting Controller</h1>
@@ -16,7 +18,8 @@
             <div id="locationStatus" class="text-center mb-4">
                 <p class="text-gray-600">Location not detected. Click refresh button to detect location.</p>
             </div>
-            <button onclick="getLocationData()" class="w-full bg-yellow-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 mb-4">
+            <button onclick="getLocationData()"
+                class="w-full bg-yellow-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 mb-4">
                 Refresh Location
             </button>
         </div>
@@ -47,24 +50,40 @@
             <input type="hidden" name="b" id="b" value="0">
             <div class="mb-4">
                 <label for="brightness" class="block text-sm font-medium text-gray-700">Brightness</label>
-                <input type="number" name="brightness" id="brightness" step="0.01" min="0" max="1" value="1" 
-                       class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                <input type="number" name="brightness" id="brightness" step="0.01" min="0" max="1" value="1"
+                    class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
             </div>
-
-            <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <div id="statusMessage" class="mt-4 text-center"></div>
+            <div class="mb-4">
+                <label for="preset" class="block text-sm font-medium text-gray-700">Lighting Preset</label>
+                <select name="preset" id="preset" onchange="change_mode()"
+                    class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="hospital">Hospital</option>
+                    <option value="office">Office</option>
+                    <option value="cafe">Cafe</option>
+                    <option value="warm" selected>Warm</option>
+                </select>
+            </div>
+            <button type="submit"
+                class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 Set Color
             </button>
         </form>
 
+
+
         <!-- Action Buttons -->
         <div class="grid grid-cols-1 gap-4">
-            <a href="/test_csv" class="block w-full text-center bg-blue-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <a href="/test_csv"
+                class="block w-full text-center bg-blue-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                 Test All CSV Values
             </a>
-            <button onclick="restartServer()" class="w-full bg-red-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+            <button onclick="restartServer()"
+                class="w-full bg-red-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
                 Restart Server
             </button>
-            <button onclick="returnToNormal()" class="w-full bg-green-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+            <button onclick="returnToNormal()"
+                class="w-full bg-green-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                 Return to Normal Operation
             </button>
         </div>
@@ -80,7 +99,7 @@
         });
 
         // Update the hidden RGB inputs when color changes
-        colorPicker.on('color:change', function(color) {
+        colorPicker.on('color:change', function (color) {
             document.getElementById('r').value = color.rgb.r;
             document.getElementById('g').value = color.rgb.g;
             document.getElementById('b').value = color.rgb.b;
@@ -88,12 +107,12 @@
 
         // Get location and timezone
         function getLocationData() {
-            document.getElementById('locationStatus').innerHTML = 
+            document.getElementById('locationStatus').innerHTML =
                 `<p class="text-gray-600">Detecting location...</p>`;
 
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    function(position) {
+                    function (position) {
                         const locationData = {
                             latitude: position.coords.latitude,
                             longitude: position.coords.longitude,
@@ -101,7 +120,7 @@
                         };
 
                         // Update location status
-                        document.getElementById('locationStatus').innerHTML = 
+                        document.getElementById('locationStatus').innerHTML =
                             `<p class="text-green-600">Location detected: ${locationData.latitude.toFixed(4)}, ${locationData.longitude.toFixed(4)}</p>`;
 
                         // Send to server
@@ -112,29 +131,58 @@
                             },
                             body: JSON.stringify(locationData)
                         })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.status === 'success') {
-                                document.getElementById('sunInfo').classList.remove('hidden');
-                                document.getElementById('sunriseTime').textContent = data.sunrise;
-                                document.getElementById('sunsetTime').textContent = data.sunset;
-                            }
-                        })
-                        .catch(error => {
-                            document.getElementById('locationStatus').innerHTML = 
-                                `<p class="text-red-600">Error processing location data</p>`;
-                        });
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.status === 'success') {
+                                    document.getElementById('sunInfo').classList.remove('hidden');
+                                    document.getElementById('sunriseTime').textContent = data.sunrise;
+                                    document.getElementById('sunsetTime').textContent = data.sunset;
+                                }
+                            })
+                            .catch(error => {
+                                document.getElementById('locationStatus').innerHTML =
+                                    `<p class="text-red-600">Error processing location data</p>`;
+                            });
                     },
-                    function(error) {
-                        document.getElementById('locationStatus').innerHTML = 
+                    function (error) {
+                        document.getElementById('locationStatus').innerHTML =
                             `<p class="text-red-600">Error getting location: ${error.message}</p>`;
                     }
                 );
             } else {
-                document.getElementById('locationStatus').innerHTML = 
+                document.getElementById('locationStatus').innerHTML =
                     `<p class="text-red-600">Geolocation is not supported by this browser</p>`;
             }
         }
+        function change_mode() {
+            const mode = document.getElementById("preset").value;
+
+            fetch('/change_mode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ mode: mode })  // Changed 'preset' to 'mode' to match backend
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const statusMessage = document.getElementById("statusMessage");
+                    if (data.status === "success") {
+                        statusMessage.textContent = "Mode changed to: " + mode;
+                        statusMessage.style.color = "green";
+                    } else {
+                        statusMessage.textContent = data.message || "Error changing mode";
+                        statusMessage.style.color = "red";
+                    }
+                })
+                .catch(error => {
+                    const statusMessage = document.getElementById("statusMessage");
+                    statusMessage.textContent = "Network error: " + error.message;
+                    statusMessage.style.color = "red";
+                });
+        }
+
+
 
         // Server control functions
         function restartServer() {
@@ -160,4 +208,5 @@
         }
     </script>
 </body>
+
 </html>

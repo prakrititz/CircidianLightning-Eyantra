@@ -123,9 +123,9 @@ def step2(mode):
         for a calming and clinical atmosphere
         """
         return np.array([
-            [0.8, 0, 0],      # Reduce red
-            [0, 1.3, 0],      # Enhance green
-            [0, 0, 1.0]       # Normal blue
+            [0.7, 0, 0],      # Reduce red
+            [0, 1.4, 0],      # Enhance green
+            [0, 0, 0.7]       # Normal blue
         ])
 
     def get_office_focus_matrix():
@@ -134,7 +134,7 @@ def step2(mode):
         to promote alertness and concentration
         """
         return np.array([
-            [0.9, 0, 0],      # Slightly reduce red
+            [0.8, 0, 0],      # Slightly reduce red
             [0, 1.0, 0],      # Normal green
             [0, 0, 1.4]       # Enhance blue
         ])
@@ -173,16 +173,18 @@ def step2(mode):
             return XYZ
 
         def xyz_to_rgb(self, xyz, mode ='none'):
-            print("Input XYZ values:", xyz)
+            print('MODE IS', mode)
+            #uncomment print("Input XYZ values:", xyz)
             transform = None
-            if mode == 'warm' or 'none':
-                transform = self.get_warmness_matrix(xyz)
+            if mode == 'warm' or mode =='none':
+                transform = get_warmness_matrix(self.warmness)
             elif mode == 'hospital':
-                transform = self.get_hospital_matrix(xyz)
+                transform = get_hospital_matrix()
+                print('Doing hospital matrix')
             elif mode == 'office':
-                transform = self.get_office_focus_matrix(xyz)
+                transform = get_office_focus_matrix()
             elif mode == 'cafe':
-                transform = self.get_cafe_matrix(xyz)
+                transform = get_cafe_matrix()
             else:
                 raise ValueError("Invalid mode. Choose from 'None', 'warmness', 'hospital', 'office_focus', or 'cafe'.")
             # Apply warmness transformation first
@@ -191,7 +193,7 @@ def step2(mode):
             
             # Convert to RGB
             rgb = np.dot(modified_matrix, xyz)
-            print("After matrix multiplication:", rgb)
+            #uncomment print("After matrix multiplication:", rgb)
             
             # Normalize each channel independently
             for i in range(3):
@@ -204,13 +206,13 @@ def step2(mode):
                 rgb = rgb / max_val
             
             rgb = (rgb * 255).astype(int)
-            print("Final RGB values:", rgb)
+            #uncomment print("Final RGB values:", rgb)
             
             return rgb
 
         def get_rgb(self, mode='none'):
             xyz = self.cct_to_xyz()
-            return self.xyz_to_rgb(xyz)
+            return self.xyz_to_rgb(xyz, mode=mode)
 
     def load_lookup_table(filename):
         df = pd.read_csv(filename)
@@ -221,7 +223,8 @@ def step2(mode):
 
         for cct,brightness in zip(cct_values, brightness_values):
             converter = ColorTemperatureConverter(cct, warmness=0.9)
-            rgb = converter.get_rgb(mode)
+            print('in save functino mode is', mode)
+            rgb = converter.get_rgb(mode=mode)
             rgb_values.append((cct, *rgb, brightness))
 
         # Create a DataFrame and save to CSV
@@ -326,7 +329,7 @@ def get_location_data():
         sunset_time = sunset_dt.strftime("%I:%M %p")
         
         # Generate lighting schedule based on sunrise/sunset
-        generate_lighting_schedule(sunrise_time, sunset_time, mode)
+        generate_lighting_schedule(sunrise_time, sunset_time)
         
         return jsonify({
             'status': 'success',
