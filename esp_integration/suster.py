@@ -4,24 +4,22 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from datetime import datetime
 
-# Load experimental data with proper time format
-experimental_data = pd.DataFrame({
-    "Date Time": ["07:12 AM", "07:13 AM", "07:14 AM", "07:15 AM", 
-                  "09:30 AM", "09:31 AM", "09:32 AM", "09:33 AM",
-                  "12:00 PM", "12:01 PM", "12:02 PM", "12:03 PM",
-                  "02:30 PM", "02:31 PM", "02:32 PM", "02:33 PM", 
-                  "03:00 PM", "03:01 PM", "03:02 PM", "03:03 PM",
-                  "06:08 PM", "06:09 PM", "06:09 PM", "06:10 PM"],
-    "Standard Equipment CAS 140CT": [4681.87, 4588.73, 4518.28, 4490.18, 
-                                   5388.59, 5397.74, 5410.07, 5415.24,
-                                   5459.03, 5464.97, 5470.72, 5471.18, 
-                                   5628.06, 5627.67, 5626.42, 5623.91,
-                                   5427.2, 5467.1, 5506.61, 5526.2,
-                                   4171.02, 4150.36, 4122.84, 4102.23],
-})
+def convert_to_ampm(decimal_time):
+    hours = int(decimal_time / 60)
+    minutes = int(decimal_time % 60)
+    period = "AM" if hours < 12 else "PM"
+    hours = hours if hours <= 12 else hours - 12
+    hours = 12 if hours == 0 else hours
+    return f"{hours:02d}:{minutes:02d} {period}"
 
-# Load generated CCT data
-generated_data = pd.read_csv("generated_circadian_cct_brightness.csv")
+experimental_data = pd.read_csv('../ideal_Dataset.csv', names=["Date Time", "Standard Equipment CAS 140CT"])
+experimental_data["Date Time"] = experimental_data["Date Time"].apply(convert_to_ampm)
+
+# Load all three generated curves
+gaussian_data = pd.read_csv("generated_circadian_gaussian.csv")
+sinusoidal_data = pd.read_csv("generated_circadian_sinusoidal.csv")
+parabolic_data = pd.read_csv("generated_circadian_parabolic.csv")
+parabolic_fitted_data = pd.read_csv("generated_circadian_parabolic_fitted.csv")
 
 def convert_to_24hr(time_str):
     return datetime.strptime(time_str, "%I:%M %p").strftime("%H:%M")
@@ -33,71 +31,114 @@ def time_to_decimal(time_str):
     return hours + minutes/60
 
 # Convert times for calculations
-generated_times = [time_to_decimal(t) for t in generated_data["Time"]]
+gaussian_times = [time_to_decimal(t) for t in gaussian_data["Time"]]
+sinusoidal_times = [time_to_decimal(t) for t in sinusoidal_data["Time"]]
+parabolic_times = [time_to_decimal(t) for t in parabolic_data["Time"]]
+parabolic_fitted_times = [time_to_decimal(t) for t in parabolic_fitted_data["Time"]]
 experimental_hours = [time_to_decimal(t) for t in experimental_data["Date Time"]]
 
-# Interpolation
-interp_cct = interp1d(generated_times, 
-                      generated_data["Color Temperature (K)"], 
-                      kind='cubic', 
-                      fill_value="extrapolate")
+# Interpolation for each model
+interp_gaussian = interp1d(gaussian_times, gaussian_data["Color Temperature (K)"], 
+                          kind='cubic', fill_value="extrapolate")
+interp_sinusoidal = interp1d(sinusoidal_times, sinusoidal_data["Color Temperature (K)"], 
+                            kind='cubic', fill_value="extrapolate")
+interp_parabolic = interp1d(parabolic_times, parabolic_data["Color Temperature (K)"], 
+                           kind='cubic', fill_value="extrapolate")
+interp_parabolic_fitted = interp1d(parabolic_fitted_times, parabolic_fitted_data["Color Temperature (K)"],kind='cubic', fill_value="extrapolate")
 
-generated_cct_at_experiment_times = interp_cct(experimental_hours)
+# Calculate generated values at experimental times
+experimental_data["Gaussian CCT"] = interp_gaussian(experimental_hours)
+experimental_data["Sinusoidal CCT"] = interp_sinusoidal(experimental_hours)
+experimental_data["Parabolic CCT"] = interp_parabolic(experimental_hours)
+experimental_data["Parabolic Fitted CCT"] = interp_parabolic_fitted(experimental_hours)
 
-# Calculate error
-experimental_data["Generated CCT"] = generated_cct_at_experiment_times
-experimental_data["Error (%)"] = np.abs(
-    (experimental_data["Generated CCT"] - experimental_data["Standard Equipment CAS 140CT"]) /
-    experimental_data["Standard Equipment CAS 140CT"]
-) * 100
+# Calculate errors for each model
+for model in ["Gaussian", "Sinusoidal", "Parabolic", "Parabolic Fitted"]:
+    experimental_data[f"{model} Error (%)"] = np.abs(
+        (experimental_data[f"{model} CCT"] - experimental_data["Standard Equipment CAS 140CT"]) /
+        experimental_data["Standard Equipment CAS 140CT"]
+    ) * 100
 
-# Calculate statistics
-avg_error = experimental_data["Error (%)"].mean()
-std_error = experimental_data["Error (%)"].std()
-correlation = np.corrcoef(experimental_data["Standard Equipment CAS 140CT"], 
-                         experimental_data["Generated CCT"])[0,1]
+# Calculate statistics for each model
+stats = {}
+for model in ["Gaussian", "Sinusoidal", "Parabolic", "Parabolic Fitted"]:
+    stats[model] = {
+        "avg_error": experimental_data[f"{model} Error (%)"].mean(),
+        "std_error": experimental_data[f"{model} Error (%)"].std(),
+        "correlation": np.corrcoef(experimental_data["Standard Equipment CAS 140CT"],
+                                 experimental_data[f"{model} CCT"])[0,1]
+    }
 
-# Plot comparison
-plt.figure(figsize=(12, 6))
-plt.plot(experimental_data["Date Time"], 
-         experimental_data["Standard Equipment CAS 140CT"], 
-         label="Standard Equipment (CAS 140CT)", 
-         color="blue", 
-         marker="o")
-plt.plot(experimental_data["Date Time"], 
-         experimental_data["Generated CCT"], 
-         label="Generated CCT", 
-         color="orange", 
-         linestyle="--", 
-         marker="x")
+# Plot comparison of all models
+plt.figure(figsize=(15, 8))
+plt.plot(experimental_data["Date Time"],
+         experimental_data["Standard Equipment CAS 140CT"],
+         label="Experimental Data",
+         color="black",
+         marker="o",
+         linestyle=":")
+plt.plot(experimental_data["Date Time"],
+         experimental_data["Gaussian CCT"],
+         label="Gaussian Model",
+         color="blue",
+         linestyle="--")
+plt.plot(experimental_data["Date Time"],
+         experimental_data["Sinusoidal CCT"],
+         label="Sinusoidal Model",
+         color="green",
+         linestyle="--")
+plt.plot(experimental_data["Date Time"],
+         experimental_data["Parabolic CCT"],
+         label="Parabolic Model",
+         color="red",
+         linestyle="--")
+plt.plot(experimental_data["Date Time"],
+         experimental_data["Parabolic Fitted CCT"],
+         label="Parabolic Fitted Model",
+         color="purple",
+         linestyle="--")
 plt.xlabel("Time")
 plt.ylabel("Color Temperature (K)")
-plt.title(f"Comparison of Generated and Experimental CCT Values\n" 
-          f"Avg Error: {avg_error:.2f}%, Std Dev: {std_error:.2f}%\n"
-          f"Correlation: {correlation:.4f}")
-plt.xticks(rotation=45)
+plt.title("Comparison of Different CCT Models with Experimental Data")
+plt.xticks(np.arange(0, len(experimental_data["Date Time"]), 10), 
+           experimental_data["Date Time"][::10],
+           rotation=45)
+plt.margins(x=0.02)
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.savefig("comparison_generated_vs_experimental.png")
+plt.savefig("model_comparison.png")
 plt.show()
 
-# Plot error distribution
-plt.figure(figsize=(12, 6))
-plt.bar(experimental_data["Date Time"], 
-        experimental_data["Error (%)"], 
-        color="red", 
-        alpha=0.7, 
-        label="Error (%)")
+# Plot error distributions
+plt.figure(figsize=(15, 6))
+width = 0.25
+x = np.arange(len(experimental_data["Date Time"]))
+plt.bar(x, experimental_data["Gaussian Error (%)"], width, label="Gaussian", color="blue", alpha=0.7)
+plt.bar(x, experimental_data["Sinusoidal Error (%)"], width, label="Sinusoidal", color="green", alpha=0.7)
+plt.bar(x, experimental_data["Parabolic Error (%)"], width, label="Parabolic", color="red", alpha=0.7)
+plt.bar(x, experimental_data["Parabolic Fitted Error (%)"], width, label="Parabolic Fitted", color="purple", alpha=0.7)
 plt.xlabel("Time")
 plt.ylabel("Error (%)")
-plt.title("Error Distribution in Generated CCT vs Experimental Data")
-plt.xticks(rotation=45)
-plt.grid(axis="y")
+plt.title("Error Distribution Comparison")
+plt.xticks(x[::10], experimental_data["Date Time"][::10], rotation=45)
+plt.margins(x=0.02)
 plt.legend()
+plt.grid(axis="y")
 plt.tight_layout()
-plt.savefig("error_analysis.png")
+plt.savefig("error_comparison.png")
 plt.show()
 
-# Save results
-experimental_data.to_csv("comparison_with_errors.csv", index=False)
+# Plot correlation comparison
+plt.figure(figsize=(10, 6))
+correlations = [stats[model]["correlation"] for model in ["Gaussian", "Sinusoidal", "Parabolic", "Parabolic Fitted"]]
+plt.bar(["Gaussian", "Sinusoidal", "Parabolic", "Parabolic Fitted"], correlations)
+plt.ylabel("Correlation Coefficient")
+plt.title("Model Correlations with Experimental Data")
+plt.grid(axis="y")
+plt.tight_layout()
+plt.savefig("correlation_comparison.png")
+plt.show()
+
+# Save detailed results
+experimental_data.to_csv("model_comparison_results.csv", index=False)

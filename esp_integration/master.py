@@ -11,7 +11,9 @@ import pytz
 import numpy as np
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
-
+MAX_COLOR_TEMP = 5700
+MIN_COLOR_TEMP = 4000
+AMPLITUDE = MAX_COLOR_TEMP-MIN_COLOR_TEMP
 app = Flask(__name__)
 def step1(sunrise_time, sunset_time):
     def time_to_hours(time_str):
@@ -60,25 +62,63 @@ def step1(sunrise_time, sunset_time):
 
         return t_smooth, cct_fit, brightness
 
+
     def generate_cct_curve_sinusoidal(sunrise, sunset, reference_data):
         sunrise_hour = time_to_hours(sunrise)
         sunset_hour = time_to_hours(sunset)
-        
+
         # Calculate midday point and scale factor
         midday = sunrise_hour + (sunset_hour - sunrise_hour) / 2
         daylight_duration = sunset_hour - sunrise_hour
         scale_factor = 12 / daylight_duration  # Normalize to 12-hour period
-        
-        t_smooth = np.arange(0, 24, 5/60)
+
+        t_smooth = np.arange(0, 24, 5 / 60)
         transition_period = 0.5  # 30 minutes transition
-        
+
         def sinusoidal(t):
             # Scale time around midday
             scaled_t = (t - midday) * scale_factor
             # Sine wave scaled to CCT range (2700K to 6500K)
             return 2700 + 3800 * (1 + np.cos(np.pi * scaled_t / 6)) / 2
-        
+
         cct_fit = sinusoidal(t_smooth)
+
+        # Smooth transitions
+        sunrise_mask = (t_smooth >= (sunrise_hour - transition_period)) & (t_smooth <= sunrise_hour)
+        sunset_mask = (t_smooth >= sunset_hour) & (t_smooth <= (sunset_hour + transition_period))
+
+        sunrise_factor = (t_smooth[sunrise_mask] - (sunrise_hour - transition_period)) / transition_period
+        sunset_factor = 1 - (t_smooth[sunset_mask] - sunset_hour) / transition_period
+
+        cct_fit[sunrise_mask] = 2700 + (cct_fit[sunrise_mask] - 2700) * sunrise_factor
+        cct_fit[sunset_mask] = 2700 + (cct_fit[sunset_mask] - 2700) * sunset_factor
+        cct_fit[t_smooth < (sunrise_hour - transition_period)] = 2700
+        cct_fit[t_smooth > (sunset_hour + transition_period)] = 2700
+
+        cct_fit = np.clip(cct_fit, 2700, 6500)
+
+        brightness = (cct_fit - 2700) / (6500 - 2700)
+        brightness = np.clip(brightness, 0, 1)
+
+        return t_smooth, cct_fit, brightness
+    
+    def generate_cct_curve_parabolic(sunrise, sunset, reference_data):
+        sunrise_hour = time_to_hours(sunrise)
+        sunset_hour = time_to_hours(sunset)
+        
+        # Calculate midday point
+        midday = sunrise_hour + (sunset_hour - sunrise_hour) / 2
+        daylight_duration = sunset_hour - sunrise_hour
+        
+        t_smooth = np.arange(0, 24, 5/60)
+        transition_period = 0.5  # 30 minutes transition
+        
+        def parabolic(t):
+            # Parabola scaled to CCT range (MIN_COLOR_TEMPK to MAX_COLOR_TEMPK)
+            a = -AMPLITUDE / ((daylight_duration/2)**2)  # Coefficient to reach MAX_COLOR_TEMPK at peak
+            return MAX_COLOR_TEMP + a * (t - midday)**2
+        
+        cct_fit = parabolic(t_smooth)
         
         # Smooth transitions
         sunrise_mask = (t_smooth >= (sunrise_hour - transition_period)) & (t_smooth <= sunrise_hour)
@@ -87,21 +127,21 @@ def step1(sunrise_time, sunset_time):
         sunrise_factor = (t_smooth[sunrise_mask] - (sunrise_hour - transition_period)) / transition_period
         sunset_factor = 1 - (t_smooth[sunset_mask] - sunset_hour) / transition_period
         
-        cct_fit[sunrise_mask] = 2700 + (cct_fit[sunrise_mask] - 2700) * sunrise_factor
-        cct_fit[sunset_mask] = 2700 + (cct_fit[sunset_mask] - 2700) * sunset_factor
-        cct_fit[t_smooth < (sunrise_hour - transition_period)] = 2700
-        cct_fit[t_smooth > (sunset_hour + transition_period)] = 2700
+        cct_fit[sunrise_mask] = MIN_COLOR_TEMP + (cct_fit[sunrise_mask] - MIN_COLOR_TEMP) * sunrise_factor
+        cct_fit[sunset_mask] = MIN_COLOR_TEMP + (cct_fit[sunset_mask] - MIN_COLOR_TEMP) * sunset_factor
+        cct_fit[t_smooth < (sunrise_hour - transition_period)] = MIN_COLOR_TEMP
+        cct_fit[t_smooth > (sunset_hour + transition_period)] = MIN_COLOR_TEMP
         
-        cct_fit = np.clip(cct_fit, 2700, 6500)
+        cct_fit = np.clip(cct_fit, MIN_COLOR_TEMP, MAX_COLOR_TEMP)
         
-        brightness = (cct_fit - 2700) / (6500 - 2700)
+        brightness = (cct_fit - MIN_COLOR_TEMP) / (MAX_COLOR_TEMP - MIN_COLOR_TEMP)
         brightness = np.clip(brightness, 0, 1)
         
         return t_smooth, cct_fit, brightness
 
     reference_data = 'input_data.csv'  # This should contain a 'Time' and 'Color Temperature (K)' column
 
-    t, cct, brightness = generate_cct_curve_sinusoidal(sunrise_time, sunset_time, reference_data)
+    t, cct, brightness = generate_cct_curve_parabolic(sunrise_time, sunset_time, reference_data)
 
     # Create a DataFrame with time in AM/PM format
     df = pd.DataFrame({
