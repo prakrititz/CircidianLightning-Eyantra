@@ -6,7 +6,8 @@
 #include <Adafruit_NeoPixel.h>
 #include <ESPmDNS.h> // mDNS library for ESP32/ESP8266
 
-#define PIN 7 // Pin where NeoPixel is connected
+#define PIN 7 // Pin where NeoPixel is connected for ESP8266
+// #define PIN 13 // Pin where NeoPixel is connected for ESP32
 #define NUMPIXELS 12 // Number of pixels on the strip
 
 const char* ssid = "Network";    // Replace with your WiFi SSID
