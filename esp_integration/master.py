@@ -11,8 +11,8 @@ import pytz
 import numpy as np
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
-MAX_COLOR_TEMP = 5700
-MIN_COLOR_TEMP = 4000
+MAX_COLOR_TEMP = 6500
+MIN_COLOR_TEMP = 2700
 AMPLITUDE = MAX_COLOR_TEMP-MIN_COLOR_TEMP
 app = Flask(__name__)
 def step1(sunrise_time, sunset_time):
@@ -321,7 +321,7 @@ csv_file = 'rgb_values.csv'
 last_manual_input_time = None
 testing_mode = False
 stop_threads = Event()
-ESP32_URL = "http://192.168.178.89/set_color"
+ESP32_URL = "http://esp-light.local/set_color"
 
 # Load CSV data
 try:
