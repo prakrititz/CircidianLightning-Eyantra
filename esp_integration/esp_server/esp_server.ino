@@ -1,12 +1,15 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <Adafruit_NeoPixel.h>
+#include <ESPmDNS.h> // mDNS library for ESP32/ESP8266
 
 #define PIN 13 // Pin where NeoPixel is connected
 #define NUMPIXELS 12 // Number of pixels on the strip
 
 const char* ssid = "Network";    // Replace with your WiFi SSID
 const char* password = "qwertyui";  // Replace with your WiFi Password
+
+const char* mdnsName = "esp-light"; // mDNS hostname
 
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 WebServer server(80);
@@ -45,6 +48,16 @@ void setup() {
   }
   Serial.println("Connected to WiFi");
 
+  // Initialize mDNS
+  if (MDNS.begin(mdnsName)) {
+    Serial.println("mDNS responder started");
+    Serial.print("Access your ESP32 at http://");
+    Serial.print(mdnsName);
+    Serial.println(".local");
+  } else {
+    Serial.println("Error setting up mDNS responder!");
+  }
+
   pixels.begin();  // Initialize NeoPixel strip
   
   // Define routes
@@ -57,4 +70,5 @@ void setup() {
 
 void loop() {
   server.handleClient();  // Handle incoming clients
+  MDNS.update();          // Handle mDNS queries
 }
