@@ -254,7 +254,7 @@ def step2(mode):
 
         def xyz_to_rgb(self, xyz, mode ='none'):
             print('MODE IS', mode)
-            #uncomment print("Input XYZ values:", xyz)
+            print("Input XYZ values:", xyz)
             transform = None
             if mode == 'warm' or mode =='none':
                 transform = get_warmness_matrix(self.warmness)
@@ -273,7 +273,7 @@ def step2(mode):
             
             # Convert to RGB
             rgb = np.dot(modified_matrix, xyz)
-            #uncomment print("After matrix multiplication:", rgb)
+            print("After matrix multiplication:", rgb)
             
             # Normalize each channel independently
             for i in range(3):
@@ -286,7 +286,7 @@ def step2(mode):
                 rgb = rgb / max_val
             
             rgb = (rgb * 255).astype(int)
-            #uncomment print("Final RGB values:", rgb)
+            print("Final RGB values:", rgb)
             
             return rgb
 
@@ -303,7 +303,7 @@ def step2(mode):
 
         for cct,brightness in zip(cct_values, brightness_values):
             converter = ColorTemperatureConverter(cct, warmness=0.9)
-            print('in save functino mode is', mode)
+            #print('in save functino mode is', mode)
             rgb = converter.get_rgb(mode=mode)
             rgb_values.append((cct, *rgb, brightness))
 
